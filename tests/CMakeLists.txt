@@ -20,11 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+cmake_minimum_required(VERSION 3.2)
+
 ###
 # project
 ###
 set(PROJECT cpp_redis_tests)
 project(${PROJECT} CXX)
+
+find_package(OpenCV REQUIRED)
 
 
 ###
@@ -33,6 +37,58 @@ project(${PROJECT} CXX)
 if(NOT WIN32)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif(NOT WIN32)
+
+# Enable ExternalProject CMake module
+include(ExternalProject)
+
+# Download and install GoogleTest
+ExternalProject_Add(
+    gtest
+    URL https://github.com/google/googletest/archive/master.zip
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/gtest
+    # Disable install step
+    INSTALL_COMMAND ""
+)
+
+# Get GTest source and binary directories from CMake project
+ExternalProject_Get_Property(gtest source_dir binary_dir)
+
+# Create a libgtest target to be used as a dependency by test programs
+add_library(libgtest IMPORTED STATIC GLOBAL)
+add_dependencies(libgtest gtest)
+
+# Set libgtest properties
+set_target_properties(libgtest PROPERTIES
+    "IMPORTED_LOCATION" "${binary_dir}/googlemock/gtest/libgtest.a"
+    "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}"
+)
+
+# Create a libgmock target to be used as a dependency by test programs
+add_library(libgmock IMPORTED STATIC GLOBAL)
+add_dependencies(libgmock gtest)
+
+# Set libgmock properties
+set_target_properties(libgmock PROPERTIES
+    "IMPORTED_LOCATION" "${binary_dir}/googlemock/libgmock.a"
+    "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}"
+)
+
+# I couldn't make it work with INTERFACE_INCLUDE_DIRECTORIES
+include_directories("${source_dir}/googletest/include"
+                    "${source_dir}/googlemock/include")
+
+SET(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined -shared -fPIC")
+
+
+add_definitions(-DOPENCV)
+add_definitions(-DCV_MAJOR_VERSION=${OpenCV_VERSION_MAJOR})
+add_definitions(-DCV_IGNORE_DEBUG_BUILD_GUARD)
+
+list(APPEND OPENCV_LINKED_LIBS opencv_core opencv_highgui opencv_imgproc)
+
+if( OpenCV_VERSION_MAJOR GREATER 2 )
+    list( APPEND OPENCV_LINKED_LIBS ${OpenCV_LIBS} opencv_videoio opencv_imgcodecs )
+endif()
 
 
 ###
@@ -57,7 +113,7 @@ foreach(DIR ${DIRS})
   foreach(SOURCE ${s_${DIR}})
     get_filename_component(TEST_NAME ${SOURCE} NAME_WE)
     add_executable(${TEST_NAME} ${MAIN} ${SOURCE})
-    target_link_libraries(${TEST_NAME} cpp_redis gtest)
+    target_link_libraries(${TEST_NAME} cpp_redis libgtest ${OPENCV_LINKED_LIBS} tacopie)
     if(WIN32)
       target_link_libraries(${TEST_NAME} ws2_32)
     else()

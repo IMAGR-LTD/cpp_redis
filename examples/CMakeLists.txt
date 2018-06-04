@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+cmake_minimum_required(VERSION 3.2)
+
 ###
 # compilation options
 ###
@@ -38,6 +40,9 @@ include_directories(${CPP_REDIS_INCLUDES})
 # libraries
 ###
 link_directories(${DEPS_LIBRARIES})
+
+find_path(TACOPIE_INCLUDE_DIR tacopie/tacopie PATHS /usr/local/include/tacopie/includes/)
+find_library(TACOPIE_LIBRARY tacopie)
 
 
 ###
@@ -73,10 +78,10 @@ if(WIN32)
   target_link_libraries(cpp_redis_kill ws2_32)
   target_link_libraries(cpp_redis_high_availability_client ws2_32)
 else()
-  target_link_libraries(cpp_redis_client pthread)
-  target_link_libraries(cpp_redis_future_client pthread)
-  target_link_libraries(cpp_redis_subscriber pthread)
-  target_link_libraries(cpp_redis_logger pthread)
-  target_link_libraries(cpp_redis_kill pthread)
-  target_link_libraries(cpp_redis_high_availability_client pthread)
+  target_link_libraries(cpp_redis_client tacopie pthread)
+  target_link_libraries(cpp_redis_future_client tacopie pthread)
+  target_link_libraries(cpp_redis_subscriber tacopie pthread)
+  target_link_libraries(cpp_redis_logger tacopie pthread)
+  target_link_libraries(cpp_redis_kill tacopie pthread)
+  target_link_libraries(cpp_redis_high_availability_client tacopie pthread)
 endif(WIN32)
